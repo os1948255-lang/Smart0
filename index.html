@@ -50,7 +50,6 @@
         .btn-card { background-color: #0ea5e9; }
         .alert { font-weight: 700; font-size: 16px; margin-top: 15px; min-height: 24px; }
 
-        /* نافذة معاينة الكارنيه والطباعة */
         #print-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
         .badge-card { background: white; width: 380px; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border: 3px solid var(--primary); position: relative; }
         .badge-card h2 { color: var(--primary); margin: 5px 0; font-size: 22px; font-weight: 900; }
@@ -135,12 +134,10 @@
         <h2 id="badge-name">اسم الطالب هنا</h2>
         <p>الكود: <span id="badge-code-text" style="color:var(--danger)">-</span></p>
         
-        <!-- الباركود الخطي 1D -->
         <div style="margin: 5px 0;">
             <svg id="barcode-svg"></svg>
         </div>
 
-        <!-- الـ QR Code الخاص بصفحة الطالب -->
         <div class="badge-qr" id="badge-qrcode-container"></div>
         <p style="font-size: 11px; color:#64748b; margin:0;">امسح QR لمتابعة الحضور والدرجات أونلاين</p>
         
@@ -186,10 +183,10 @@
             const today = new Date().toLocaleDateString('ar-EG');
             const dates = student.attendanceDates || [];
             
-            // التحقق عما إذا كان الطالب قد سُجل حضوره اليوم بالفعل
+            // شرط منع تسجيل الطالب أكثر من مرة في نفس اليوم
             if (dates.includes(today)) {
                 scanMessage.style.color = "var(--danger)";
-                scanMessage.innerText = `⚠️ تنبيه: الطالب (${student.name}) سُجل حضوره اليوم بالفعل ولا يمكن تكرار التسجيل اليوم!`;
+                scanMessage.innerText = `⚠️ تنبيه: الطالب (${student.name}) سُجل حضوره اليوم بالفعل ولا يمكن تكرار تسجيله اليوم!`;
             } else {
                 dates.push(today);
                 studentsRef.child(code).update({
