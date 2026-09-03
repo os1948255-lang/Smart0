@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مركز التفوق التعليمي - لوحة التحكم الاحترافية</title>
+    <!-- استدعاء خط Cairo الاحترافي للطباعة والتصميم -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- مكتبة توليد الـ QR Code -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --primary: #4f46e5; --primary-dark: #4338ca; --success: #059669; --danger: #dc2626; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; }
+        * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
+        body { background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 30px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.3); }
+        header h1 { margin: 0 0 5px 0; font-size: 28px; font-weight: 900; }
+        header p { margin: 0; opacity: 0.9; font-size: 16px; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-right: 5px solid var(--primary); }
+        .stat-card.revenue { border-right-color: var(--success); }
+        .stat-card h3 { margin: 0; font-size: 14px; color: #64748b; }
+        .stat-card p { font-size: 26px; font-weight: 900; margin: 8px 0 0 0; color: var(--text); }
+
+        .card { background: var(--card-bg); padding: 25px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .card h3 { margin-top: 0; color: var(--primary); font-weight: 700; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; }
+
+        .scan-area { background: #eef2ff; border: 2px dashed #6366f1; text-align: center; padding: 30px; border-radius: 14px; }
+        .scan-area input { width: 60%; padding: 14px; font-size: 18px; border: 2px solid #cbd5e1; border-radius: 10px; text-align: center; outline: none; transition: 0.3s; }
+        .scan-area input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        input, select { padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+        input:focus { border-color: var(--primary); }
+        button { padding: 12px 20px; background: var(--success); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; transition: 0.2s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: center; }
+        th { background-color: var(--primary); color: white; font-weight: 600; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+
+        .btn-whatsapp { background-color: #25d366; }
+        .btn-card { background-color: #0ea5e9; }
+        .alert { font-weight: 700; font-size: 16px; margin-top: 15px; min-height: 24px; }
+
+        /* نافذة معاينة الكارنيه والطباعة */
+        #print-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
+        .badge-card { background: white; width: 350px; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border: 3px solid var(--primary); position: relative; }
+        .badge-card h2 { color: var(--primary); margin: 5px 0; font-size: 22px; font-weight: 900; }
+        .badge-card p { margin: 5px 0; color: #475569; font-size: 14px; font-weight: 600; }
+        .badge-qr { margin: 15px auto; width: 150px; height: 150px; }
+        .close-modal { position: absolute; top: 10px; left: 15px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-modal, #print-modal * { visibility: visible; }
+            #print-modal { position: absolute; left: 0; top: 0; background: white; width: 100%; height: 100%; display: flex !important; }
+            .close-modal, .print-btn-action { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>نظام مركز التفوق التعليمي الذكي</h1>
+        <p>إدارة الحضور، التحصيل، ومتابعة أولياء الأمور باحترافية تامة</p>
+    </header>
+
+    <!-- إحصائيات السيستم -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>إجمالي الطلاب المسجلين</h3>
+            <p id="total-students">0</p>
+        </div>
+        <div class="stat-card revenue">
+            <h3>إجمالي الإيرادات المحصلة</h3>
+            <p><span id="total-revenue">0</span> ج.م</p>
+        </div>
+    </div>
+
+    <!-- مسح الباركود الخطي السريع -->
+    <div class="card scan-area">
+        <h2>تسجيل الحضور الفوري بالبارسكود (1D)</h2>
+        <input type="text" id="barcode-input" placeholder="امسح كود الطالب هنا واضغط Enter..." autofocus autocomplete="off">
+        <div id="scan-message" class="alert"></div>
+    </div>
+
+    <!-- إضافة طالب جديد -->
+    <div class="card">
+        <h3>تسجيل طالب جديد بالسيستم</h3>
+        <form id="student-form">
+            <div class="form-grid">
+                <input type="text" id="student-code" placeholder="كود الطالب (فريد)" required>
+                <input type="text" id="student-name" placeholder="اسم الطالب الرباعي" required>
+                <input type="text" id="student-phone" placeholder="رقم هاتف الطالب" required>
+                <input type="text" id="parent-phone" placeholder="رقم ولي الأمر (مثال: 201xxxxxxxxx)" required>
+                <input type="number" id="monthly-fee" placeholder="مصاريف الشهر (ج.م)" value="200" required>
+                <input type="number" id="total-sessions" placeholder="إجمالي حصص الشهر" value="8" required>
+            </div>
+            <button type="submit">حفظ الطالب وتوليد كود التعريف</button>
+        </form>
+    </div>
+
+    <!-- جدول إدارة الطلاب -->
+    <div class="card">
+        <h3>قائمة الطلاب ومتابعة الحضور والتحصيل</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الكود</th>
+                        <th>اسم الطالب</th>
+                        <th>رقم ولي الأمر</th>
+                        <th>درجة الامتحان</th>
+                        <th>حالة المصاريف</th>
+                        <th>الحصص الحاضرة / الإجمالي</th>
+                        <th>إجراءات الكارنيه والتواصل</th>
+                    </tr>
+                </thead>
+                <tbody id="students-table-body">
+                    <!-- البيانات تُجلب تفاعلياً من فايربيس -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة معاينة وطباعة كارت الطالب (تاج / كارنيه) -->
+<div id="print-modal">
+    <div class="badge-card">
+        <button class="close-modal" onclick="closeBadgeModal()">×</button>
+        <p style="font-size: 12px; color: var(--primary); font-weight: 700;">مركز التفوق التعليمي</p>
+        <h2 id="badge-name">اسم الطالب هنا</h2>
+        <p>الكود التعريفي: <span id="badge-code" style="color:var(--danger)">-</span></p>
+        <div class="badge-qr" id="badge-qrcode-container"></div>
+        <p style="font-size: 11px; color:#64748b;">امسح الكود لمتابعة الحضور والدرجات أونلاين</p>
+        <button class="print-btn-action" onclick="window.print()" style="margin-top:10px; width:100%; background:var(--primary);">طباعة الكارنيه 🖨️</button>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD6UDuCBns0_zdWOhnLOX3OtKelHs3hGmc",
+        authDomain: "altafawuk-center.firebaseapp.com",
+        databaseURL: "https://altafawuk-center-default-rtdb.firebaseio.com",
+        projectId: "altafawuk-center",
+        storageBucket: "altafawuk-center.firebasestorage.app",
+        messagingSenderId: "499180495752",
+        appId: "1:499180495752:web:6f2e72fb4e87f8becc103d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const studentsRef = database.ref('students');
+
+    const barcodeInput = document.getElementById('barcode-input');
+    const scanMessage = document.getElementById('scan-message');
+    let localStudents = {};
+
+    document.addEventListener('click', () => barcodeInput.focus());
+
+    barcodeInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            const code = barcodeInput.value.trim();
+            if (code) {
+                registerAttendance(code);
+                barcodeInput.value = '';
+            }
+        }
+    });
+
+    function registerAttendance(code) {
+        if (localStudents[code]) {
+            const student = localStudents[code];
+            const currentCount = student.attendanceCount || 0;
+            const today = new Date().toLocaleDateString('ar-EG');
+            const dates = student.attendanceDates || [];
+            
+            if(!dates.includes(today)) {
+                dates.push(today);
+            }
+
+            studentsRef.child(code).update({
+                attendanceCount: currentCount + 1,
+                attendanceDates: dates
+            });
+
+            scanMessage.style.color = "var(--success)";
+            scanMessage.innerText = `✅ تم تسجيل حضور الطالب: ${student.name}`;
+        } else {
+            scanMessage.style.color = "var(--danger)";
+            scanMessage.innerText = `❌ الكود (${code}) غير مسجل بالسيستم!`;
+        }
+        setTimeout(() => { scanMessage.innerText = ''; }, 4000);
+    }
+
+    document.getElementById('student-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const code = document.getElementById('student-code').value.trim();
+        const name = document.getElementById('student-name').value.trim();
+        const phone = document.getElementById('student-phone').value.trim();
+        const parentPhone = document.getElementById('parent-phone').value.trim();
+        const fee = parseFloat(document.getElementById('monthly-fee').value);
+        const totalSessions = parseInt(document.getElementById('total-sessions').value) || 8;
+
+        const existing = localStudents[code] || {};
+
+        studentsRef.child(code).set({
+            code: code,
+            name: name,
+            phone: phone,
+            parentPhone: parentPhone,
+            fee: fee,
+            totalSessions: totalSessions,
+            isPaid: existing.isPaid || false,
+            examScore: existing.examScore || 'لم تحدد',
+            attendanceCount: existing.attendanceCount || 0,
+            attendanceDates: existing.attendanceDates || []
+        });
+
+        this.reset();
+        alert('تم حفظ بيانات الطالب وتوليد ملفه بنجاح!');
+    });
+
+    studentsRef.on('value', (snapshot) => {
+        localStudents = snapshot.val() || {};
+        renderTable(localStudents);
+    });
+
+    function togglePaid(code) {
+        const currentPaid = localStudents[code].isPaid;
+        studentsRef.child(code).update({ isPaid: !currentPaid });
+    }
+
+    function updateScore(code, score) {
+        studentsRef.child(code).update({ examScore: score });
+    }
+
+    function updateAttendanceManual(code, count) {
+        const val = parseInt(count) || 0;
+        studentsRef.child(code).update({ attendanceCount: val });
+    }
+
+    function sendWhatsApp(code) {
+        const s = localStudents[code];
+        const paidStatus = s.isPaid ? "تم السداد ✅" : "لم يتم السداد ❌";
+        
+        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        const studentPageUrl = baseUrl + `student.html?code=${s.code}`;
+
+        const message = `مرحباً ولي أمر الطالب المحترم: ${s.name}%0A` +
+                        `إليك تقرير المتابعة الشهري من مركز التفوق:%0A` +
+                        `- كود الطالب: ${s.code}%0A` +
+                        `- الحضور: (${s.attendanceCount || 0} من ${s.totalSessions || 8} حصص)%0A` +
+                        `- درجة الامتحان: ${s.examScore}%0A` +
+                        `- حالة المصاريف: ${paidStatus}%0A%0A` +
+                        `متابعة تفاصيل الحضور والدرجات أونلاين عبر الرابط الآمن:%0A${studentPageUrl}`;
+
+        window.open(`https://api.whatsapp.com/send?phone=${s.parentPhone}&text=${message}`, '_blank');
+    }
+
+    function openBadgeModal(code) {
+        const s = localStudents[code];
+        document.getElementById('badge-name').innerText = s.name;
+        document.getElementById('badge-code').innerText = s.code;
+        
+        const qrContainer = document.getElementById('badge-qrcode-container');
+        qrContainer.innerHTML = '';
+        
+        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        const studentPageUrl = baseUrl + `student.html?code=${s.code}`;
+
+        QRCode.toCanvas(studentPageUrl, { width: 150, margin: 1 }, function (err, canvas) {
+            if (!err) qrContainer.appendChild(canvas);
+        });
+
+        document.getElementById('print-modal').style.display = 'flex';
+    }
+
+    function closeBadgeModal() {
+        document.getElementById('print-modal').style.display = 'none';
+    }
+
+    function renderTable(studentsData) {
+        const tbody = document.getElementById('students-table-body');
+        tbody.innerHTML = '';
+
+        let count = 0;
+        let revenue = 0;
+
+        for (let code in studentsData) {
+            count++;
+            const s = studentsData[code];
+            if (s.isPaid) revenue += (s.fee || 0);
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${s.code}</b></td>
+                <td>${s.name}</td>
+                <td>${s.parentPhone}</td>
+                <td><input type="text" value="${s.examScore}" style="width:65px; text-align:center;" onchange="updateScore('${s.code}', this.value)"></td>
+                <td>
+                    <button style="background:${s.isPaid ? 'var(--success)' : 'var(--danger)'}; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;" onclick="togglePaid('${s.code}')">
+                        ${s.isPaid ? 'تم السداد' : 'لم يتم'}
+                    </button>
+                </td>
+                <td>
+                    <input type="number" value="${s.attendanceCount || 0}" style="width:55px; text-align:center;" onchange="updateAttendanceManual('${s.code}', this.value)"> 
+                    / <span style="font-weight:bold; color:var(--primary);">${s.totalSessions || 8}</span>
+                </td>
+                <td>
+                    <button class="btn-whatsapp" onclick="sendWhatsApp('${s.code}')" style="padding:6px 10px; border-radius:6px; color:white; border:none; cursor:pointer; font-weight:bold;">واتساب 📱</button>
+                    <button class="btn-card" onclick="openBadgeModal('${s.code}')" style="padding:6px 10px; border-radius:6px; color:white; border:none; cursor:pointer; font-weight:bold;">كارنيه 🖨️</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        document.getElementById('total-students').innerText = count;
+        document.getElementById('total-revenue').innerText = revenue;
+    }
+</script>
+</body>
+</html>
