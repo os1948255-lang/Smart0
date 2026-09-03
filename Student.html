@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مركز التفوق التعليمي - متابعة الطالب</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
+        body { background-color: #f1f5f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 90vh; }
+        .card { width: 100%; max-width: 500px; background: #fff; border-radius: 20px; padding: 30px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border-top: 6px solid #4f46e5; }
+        .header { text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h2 { color: #4f46e5; margin: 0 0 5px 0; font-weight: 900; }
+        .header p { color: #64748b; margin: 0; font-size: 14px; font-weight: 600; }
+        .info-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f1f5f9; font-size: 15px; }
+        .label { font-weight: 700; color: #475569; }
+        .value { color: #4f46e5; font-weight: 700; }
+        .badge { padding: 4px 12px; border-radius: 6px; color: white; font-weight: 700; font-size: 14px; }
+        .paid { background-color: #059669; }
+        .unpaid { background-color: #dc2626; }
+        .dates-box { margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .dates-list { font-size: 13px; color: #334155; margin-top: 8px; line-height: 1.6; font-weight: 600; }
+        .footer-note { text-align: center; margin-top: 25px; font-size: 12px; color: #94a3b8; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="card" id="student-card">
+    <div class="header">
+        <h2 id="st-name">جاري تحميل البيانات...</h2>
+        <p>كود الطالب التعريفي: <span id="st-code">-</span></p>
+    </div>
+
+    <div class="info-row">
+        <span class="label">إجمالي الحصص الحاضرة:</span>
+        <span class="value"><span id="st-attendance">0</span> من <span id="st-total-sessions">8</span> حصص</span>
+    </div>
+
+    <div class="info-row">
+        <span class="label">درجة الامتحان الشهري:</span>
+        <span class="value" id="st-exam">-</span>
+    </div>
+
+    <div class="info-row">
+        <span class="label">حالة المصاريف الشهرية:</span>
+        <span id="st-status" class="badge unpaid">غير معروف</span>
+    </div>
+
+    <div class="dates-box">
+        <span class="label">تواريخ أيام الحضور المسجلة بالسنتر:</span>
+        <div id="st-dates" class="dates-list">لا يوجد حضور مسجل حتى الآن</div>
+    </div>
+
+    <div class="footer-note">
+        جميع البيانات محدثة لحظياً من نظام مركز التفوق التعليمي.
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD6UDuCBns0_zdWOhnLOX3OtKelHs3hGmc",
+        authDomain: "altafawuk-center.firebaseapp.com",
+        databaseURL: "https://altafawuk-center-default-rtdb.firebaseio.com",
+        projectId: "altafawuk-center",
+        storageBucket: "altafawuk-center.firebasestorage.app",
+        messagingSenderId: "499180495752",
+        appId: "1:499180495752:web:6f2e72fb4e87f8becc103d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentCode = urlParams.get('code');
+
+    if (studentCode) {
+        database.ref('students/' + studentCode).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                document.getElementById('st-name').innerText = data.name;
+                document.getElementById('st-code').innerText = data.code;
+                document.getElementById('st-attendance').innerText = data.attendanceCount || 0;
+                document.getElementById('st-total-sessions').innerText = data.totalSessions || 8;
+                document.getElementById('st-exam').innerText = data.examScore || 'لم تحدد بعد';
+                
+                const statusElem = document.getElementById('st-status');
+                if (data.isPaid) {
+                    statusElem.innerText = 'تم السداد ✅';
+                    statusElem.className = 'badge paid';
+                } else {
+                    statusElem.innerText = 'لم يتم السداد ❌';
+                    statusElem.className = 'badge unpaid';
+                }
+
+                if (data.attendanceDates && data.attendanceDates.length > 0) {
+                    document.getElementById('st-dates').innerText = data.attendanceDates.join(' | ');
+                } else {
+                    document.getElementById('st-dates').innerText = 'لا يوجد تواريخ حضور مسجلة بعد';
+                }
+            } else {
+                document.getElementById('student-card').innerHTML = "<h3 style='color:red; text-align:center;'>عفواً، بيانات هذا الطالب غير موجودة بالسيستم!</h3>";
+            }
+        });
+    } else {
+        document.getElementById('student-card').innerHTML = "<h3 style='color:red; text-align:center;'>رابط غير صحيح أو ناقص، برجاء التأكد من الكود!</h3>";
+    }
+</script>
+</body>
+</html>
