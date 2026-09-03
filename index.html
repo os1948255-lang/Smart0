@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مركز التفوق التعليمي - لوحة التحكم الاحترافية</title>
-    <!-- استدعاء خط Cairo الاحترافي للطباعة والتصميم -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <!-- مكتبة توليد الـ QR Code -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <!-- مكتبة توليد الباركود الخطي 1D Barcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -51,10 +52,10 @@
 
         /* نافذة معاينة الكارنيه والطباعة */
         #print-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; }
-        .badge-card { background: white; width: 350px; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border: 3px solid var(--primary); position: relative; }
+        .badge-card { background: white; width: 380px; padding: 25px; border-radius: 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); border: 3px solid var(--primary); position: relative; }
         .badge-card h2 { color: var(--primary); margin: 5px 0; font-size: 22px; font-weight: 900; }
         .badge-card p { margin: 5px 0; color: #475569; font-size: 14px; font-weight: 600; }
-        .badge-qr { margin: 15px auto; width: 150px; height: 150px; }
+        .badge-qr { margin: 10px auto; width: 130px; height: 130px; display: flex; justify-content: center; align-items: center; }
         .close-modal { position: absolute; top: 10px; left: 15px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
         @media print {
             body * { visibility: hidden; }
@@ -72,7 +73,6 @@
         <p>إدارة الحضور، التحصيل، ومتابعة أولياء الأمور باحترافية تامة</p>
     </header>
 
-    <!-- إحصائيات السيستم -->
     <div class="stats-grid">
         <div class="stat-card">
             <h3>إجمالي الطلاب المسجلين</h3>
@@ -84,14 +84,12 @@
         </div>
     </div>
 
-    <!-- مسح الباركود الخطي السريع -->
     <div class="card scan-area">
-        <h2>تسجيل الحضور الفوري بالبارسكود (1D)</h2>
+        <h2>تسجيل الحضور الفوري بالباركود (1D)</h2>
         <input type="text" id="barcode-input" placeholder="امسح كود الطالب هنا واضغط Enter..." autofocus autocomplete="off">
         <div id="scan-message" class="alert"></div>
     </div>
 
-    <!-- إضافة طالب جديد -->
     <div class="card">
         <h3>تسجيل طالب جديد بالسيستم</h3>
         <form id="student-form">
@@ -107,7 +105,6 @@
         </form>
     </div>
 
-    <!-- جدول إدارة الطلاب -->
     <div class="card">
         <h3>قائمة الطلاب ومتابعة الحضور والتحصيل</h3>
         <div class="table-container">
@@ -124,22 +121,29 @@
                     </tr>
                 </thead>
                 <tbody id="students-table-body">
-                    <!-- البيانات تُجلب تفاعلياً من فايربيس -->
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<!-- نافذة معاينة وطباعة كارت الطالب (تاج / كارنيه) -->
+<!-- نافذة معاينة وطباعة كارت الطالب -->
 <div id="print-modal">
     <div class="badge-card">
         <button class="close-modal" onclick="closeBadgeModal()">×</button>
         <p style="font-size: 12px; color: var(--primary); font-weight: 700;">مركز التفوق التعليمي</p>
         <h2 id="badge-name">اسم الطالب هنا</h2>
-        <p>الكود التعريفي: <span id="badge-code" style="color:var(--danger)">-</span></p>
+        <p>الكود: <span id="badge-code-text" style="color:var(--danger)">-</span></p>
+        
+        <!-- الباركود الخطي 1D -->
+        <div style="margin: 5px 0;">
+            <svg id="barcode-svg"></svg>
+        </div>
+
+        <!-- الـ QR Code الخاص بصفحة الطالب -->
         <div class="badge-qr" id="badge-qrcode-container"></div>
-        <p style="font-size: 11px; color:#64748b;">امسح الكود لمتابعة الحضور والدرجات أونلاين</p>
+        <p style="font-size: 11px; color:#64748b; margin:0;">امسح QR لمتابعة الحضور والدرجات أونلاين</p>
+        
         <button class="print-btn-action" onclick="window.print()" style="margin-top:10px; width:100%; background:var(--primary);">طباعة الكارنيه 🖨️</button>
     </div>
 </div>
@@ -182,22 +186,25 @@
             const today = new Date().toLocaleDateString('ar-EG');
             const dates = student.attendanceDates || [];
             
-            if(!dates.includes(today)) {
+            // التحقق عما إذا كان الطالب قد سُجل حضوره اليوم بالفعل
+            if (dates.includes(today)) {
+                scanMessage.style.color = "var(--danger)";
+                scanMessage.innerText = `⚠️ تنبيه: الطالب (${student.name}) سُجل حضوره اليوم بالفعل ولا يمكن تكرار التسجيل اليوم!`;
+            } else {
                 dates.push(today);
+                studentsRef.child(code).update({
+                    attendanceCount: currentCount + 1,
+                    attendanceDates: dates
+                });
+
+                scanMessage.style.color = "var(--success)";
+                scanMessage.innerText = `✅ تم تسجيل حضور الطالب بنجاح: ${student.name}`;
             }
-
-            studentsRef.child(code).update({
-                attendanceCount: currentCount + 1,
-                attendanceDates: dates
-            });
-
-            scanMessage.style.color = "var(--success)";
-            scanMessage.innerText = `✅ تم تسجيل حضور الطالب: ${student.name}`;
         } else {
             scanMessage.style.color = "var(--danger)";
             scanMessage.innerText = `❌ الكود (${code}) غير مسجل بالسيستم!`;
         }
-        setTimeout(() => { scanMessage.innerText = ''; }, 4000);
+        setTimeout(() => { scanMessage.innerText = ''; }, 5000);
     }
 
     document.getElementById('student-form').addEventListener('submit', function (e) {
@@ -251,7 +258,8 @@
         const s = localStudents[code];
         const paidStatus = s.isPaid ? "تم السداد ✅" : "لم يتم السداد ❌";
         
-        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        const loc = window.location.href;
+        const baseUrl = loc.substring(0, loc.lastIndexOf('/') + 1);
         const studentPageUrl = baseUrl + `student.html?code=${s.code}`;
 
         const message = `مرحباً ولي أمر الطالب المحترم: ${s.name}%0A` +
@@ -260,23 +268,35 @@
                         `- الحضور: (${s.attendanceCount || 0} من ${s.totalSessions || 8} حصص)%0A` +
                         `- درجة الامتحان: ${s.examScore}%0A` +
                         `- حالة المصاريف: ${paidStatus}%0A%0A` +
-                        `متابعة تفاصيل الحضور والدرجات أونلاين عبر الرابط الآمن:%0A${studentPageUrl}`;
+                        `للاطلاع على تفاصيل الحضور والدرجات أونلاين:%0A${studentPageUrl}`;
 
-        window.open(`https://api.whatsapp.com/send?phone=${s.parentPhone}&text=${message}`, '_blank');
+        window.open(`https://wa.me/${s.parentPhone}?text=${message}`, '_blank');
     }
 
     function openBadgeModal(code) {
         const s = localStudents[code];
         document.getElementById('badge-name').innerText = s.name;
-        document.getElementById('badge-code').innerText = s.code;
+        document.getElementById('badge-code-text').innerText = s.code;
         
+        try {
+            JsBarcode("#barcode-svg", s.code, {
+                format: "CODE128",
+                lineColor: "#1e293b",
+                width: 1.8,
+                height: 45,
+                displayValue: true,
+                fontSize: 14
+            });
+        } catch(err) { console.log(err); }
+
         const qrContainer = document.getElementById('badge-qrcode-container');
         qrContainer.innerHTML = '';
         
-        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+        const loc = window.location.href;
+        const baseUrl = loc.substring(0, loc.lastIndexOf('/') + 1);
         const studentPageUrl = baseUrl + `student.html?code=${s.code}`;
 
-        QRCode.toCanvas(studentPageUrl, { width: 150, margin: 1 }, function (err, canvas) {
+        QRCode.toCanvas(studentPageUrl, { width: 120, margin: 1 }, function (err, canvas) {
             if (!err) qrContainer.appendChild(canvas);
         });
 
