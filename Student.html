@@ -1,106 +1,563 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مركز التفوق التعليمي - متابعة الطالب</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        * { font-family: 'Cairo', sans-serif; box-sizing: border-box; }
-        body { background-color: #f1f5f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 90vh; }
-        .card { width: 100%; max-width: 500px; background: #fff; border-radius: 20px; padding: 30px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); border-top: 6px solid #4f46e5; }
-        .header { text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h2 { color: #4f46e5; margin: 0 0 5px 0; font-weight: 900; }
-        .header p { color: #64748b; margin: 0; font-size: 14px; font-weight: 600; }
-        .info-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f1f5f9; font-size: 15px; }
-        .label { font-weight: 700; color: #475569; }
-        .value { color: #4f46e5; font-weight: 700; }
-        .badge { padding: 4px 12px; border-radius: 6px; color: white; font-weight: 700; font-size: 14px; }
-        .paid { background-color: #059669; }
-        .unpaid { background-color: #dc2626; }
-        .dates-box { margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; }
-        .dates-list { font-size: 13px; color: #334155; margin-top: 8px; line-height: 1.6; font-weight: 600; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>صفحة الطالب</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+  :root{
+    --bg:#f8fafc;
+    --card:#ffffff;
+    --border:#e2e8f0;
+    --border-soft:#eef1f6;
+
+    --indigo:#4f46e5;
+    --indigo-dark:#4338ca;
+    --indigo-bg:#eef2ff;
+    --purple:#7c3aed;
+
+    --emerald:#10b981;
+    --emerald-dark:#059669;
+    --emerald-bg:#ecfdf5;
+
+    --red:#ef4444;
+    --red-bg:#fef2f2;
+
+    --text:#0f172a;
+    --muted:#64748b;
+    --muted-2:#94a3b8;
+
+    --shadow-sm:0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    --shadow-lg:0 20px 45px rgba(79,70,229,.14), 0 6px 14px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    font-family:'Cairo',sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:40px 16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::-webkit-scrollbar{width:8px;}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:20px;}
+
+  .wrap{
+    width:100%;
+    max-width:540px;
+  }
+
+  .top-banner{
+    background:linear-gradient(120deg,#4f46e5 0%,#7c3aed 100%);
+    color:#fff;
+    border-radius:26px 26px 0 0;
+    padding:34px 28px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .top-banner::before{
+    content:"";
+    position:absolute;
+    width:220px;height:220px;
+    background:rgba(255,255,255,.08);
+    border-radius:50%;
+    top:-100px;right:-60px;
+  }
+  .top-banner::after{
+    content:"";
+    position:absolute;
+    width:160px;height:160px;
+    background:rgba(255,255,255,.06);
+    border-radius:50%;
+    bottom:-90px;left:-40px;
+  }
+  .top-banner .mark{
+    width:58px;height:58px;border-radius:16px;
+    background:rgba(255,255,255,.16);
+    backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,.28);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:24px;
+    margin:0 auto 14px;
+    position:relative;
+    z-index:1;
+  }
+  .top-banner h1{margin:0;font-size:18px;font-weight:800;position:relative;z-index:1;}
+  .top-banner p{margin:5px 0 0;font-size:12.5px;color:rgba(255,255,255,.8);font-weight:500;position:relative;z-index:1;}
+
+  .content-card{
+    background:var(--card);
+    border:1px solid var(--border-soft);
+    border-top:none;
+    border-radius:0 0 26px 26px;
+    padding:30px 26px 34px;
+    box-shadow:var(--shadow-lg);
+  }
+
+  /* states */
+  #loadingState, #notFoundState{
+    text-align:center;
+    padding:56px 10px;
+    color:var(--muted);
+  }
+  #loadingState .spinner{
+    width:36px;height:36px;
+    border:3px solid var(--border-soft);
+    border-top-color:var(--indigo);
+    border-radius:50%;
+    margin:0 auto 18px;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loadingState p{font-weight:600;font-size:13.5px;}
+  #notFoundState .icon{
+    width:64px;height:64px;
+    border-radius:50%;
+    background:var(--red-bg);
+    display:flex;align-items:center;justify-content:center;
+    font-size:28px;
+    margin:0 auto 14px;
+  }
+  #notFoundState h2{color:var(--text);font-size:16px;margin:0 0 6px;font-weight:800;}
+  #notFoundState p{font-size:13px;font-weight:500;}
+
+  #studentState{display:none;}
+
+  .student-header{
+    text-align:center;
+    padding-bottom:22px;
+    border-bottom:1px dashed var(--border);
+    margin-bottom:22px;
+  }
+  .avatar-ring{
+    width:76px;height:76px;
+    border-radius:50%;
+    background:linear-gradient(135deg,var(--indigo-bg),#f5f3ff);
+    border:2px solid var(--indigo-bg);
+    display:flex;align-items:center;justify-content:center;
+    font-size:28px;font-weight:800;color:var(--indigo);
+    margin:0 auto 14px;
+  }
+  .student-header .name{
+    font-size:23px;
+    font-weight:800;
+    margin:0 0 6px;
+    letter-spacing:-.3px;
+  }
+  .student-header .code-pill{
+    display:inline-block;
+    background:var(--indigo-bg);
+    color:var(--indigo-dark);
+    font-weight:800;
+    font-size:12.5px;
+    padding:6px 16px;
+    border-radius:20px;
+  }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .stat-box{
+    background:#f8fafc;
+    border:1px solid var(--border-soft);
+    border-radius:16px;
+    padding:18px;
+    text-align:center;
+    transition:transform .15s, box-shadow .15s;
+  }
+  .stat-box:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm);}
+  .stat-box .val{
+    font-size:24px;
+    font-weight:800;
+    color:var(--indigo-dark);
+    line-height:1.2;
+    letter-spacing:-.3px;
+  }
+  .stat-box .val small{
+    font-size:13px;
+    font-weight:700;
+    color:var(--muted-2);
+  }
+  .stat-box .lbl{
+    font-size:12px;
+    color:var(--muted);
+    font-weight:700;
+    margin-top:5px;
+  }
+
+  .info-line{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#f8fafc;
+    border:1px solid var(--border-soft);
+    border-radius:14px;
+    padding:13px 18px;
+    margin-bottom:10px;
+    font-size:13.5px;
+    transition:background .15s;
+  }
+  .info-line:hover{background:#f1f5f9;}
+  .info-line .k{color:var(--muted);font-weight:700;}
+  .info-line .v{font-weight:800;color:var(--text);}
+
+  .fee-status{
+    text-align:center;
+    padding:16px;
+    border-radius:16px;
+    font-weight:800;
+    font-size:14px;
+    margin:18px 0 22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+  .fee-status.paid{background:var(--emerald-bg);color:var(--emerald-dark);}
+  .fee-status.unpaid{background:var(--red-bg);color:var(--red);}
+
+  .progress-wrap{
+    margin-bottom:24px;
+  }
+  .progress-wrap .top-line{
+    display:flex;
+    justify-content:space-between;
+    font-size:12.5px;
+    color:var(--muted);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .progress-wrap .top-line span:last-child{color:var(--indigo);font-weight:800;}
+  .progress-bar{
+    height:11px;
+    background:#eef1f6;
+    border-radius:20px;
+    overflow:hidden;
+  }
+  .progress-bar .fill{
+    height:100%;
+    background:linear-gradient(90deg,var(--indigo),var(--purple));
+    border-radius:20px;
+    transition:width .5s ease;
+  }
+
+  .section-title{
+    font-size:14.5px;
+    font-weight:800;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+
+  .dates-list{
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    max-height:270px;
+    overflow-y:auto;
+    padding-left:4px;
+  }
+  .date-item{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    background:#f8fafc;
+    border:1px solid var(--border-soft);
+    border-radius:12px;
+    padding:11px 16px;
+    font-size:13.5px;
+    font-weight:600;
+    transition:background .12s;
+  }
+  .date-item:hover{background:#f1f5f9;}
+  .date-item .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--emerald);
+    flex-shrink:0;
+    box-shadow:0 0 0 4px var(--emerald-bg);
+  }
+  .date-item .num{
+    color:var(--muted-2);
+    font-size:12px;
+    margin-right:auto;
+    font-weight:700;
+  }
+  .no-dates{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+    padding:24px;
+    background:#f8fafc;
+    border-radius:14px;
+    border:1px dashed var(--border);
+  }
+
+  .live-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    font-size:12px;
+    color:var(--muted);
+    font-weight:700;
+    margin-top:26px;
+    justify-content:center;
+    width:100%;
+  }
+  .live-badge .pulse{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--emerald);
+    box-shadow:0 0 0 0 rgba(16,185,129,.6);
+    animation:pulse 1.6s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(16,185,129,.55);}
+    70%{box-shadow:0 0 0 9px rgba(16,185,129,0);}
+    100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}
+  }
+</style>
 </head>
 <body>
 
-<div class="card" id="student-card">
-    <div class="header">
-        <h2 id="st-name">جاري تحميل البيانات...</h2>
-        <p>كود الطالب التعريفي: <span id="st-code">-</span></p>
+<div class="wrap">
+  <div class="top-banner">
+    <div class="mark">S</div>
+    <h1>صفحة بيانات الطالب</h1>
+    <p>تحديث لحظي من نظام السنتر التعليمي</p>
+  </div>
+
+  <div class="content-card">
+
+    <!-- Loading -->
+    <div id="loadingState">
+      <div class="spinner"></div>
+      <p>جاري تحميل بيانات الطالب...</p>
     </div>
 
-    <div class="info-row">
-        <span class="label">إجمالي الحصص الحاضرة:</span>
-        <span class="value"><span id="st-attendance">0</span> من <span id="st-total-sessions">8</span> حصص</span>
+    <!-- Not found -->
+    <div id="notFoundState" style="display:none;">
+      <div class="icon">⚠️</div>
+      <h2>لم يتم العثور على الطالب</h2>
+      <p>تأكد من صحة رابط الكارنيه أو الكود المستخدم.</p>
     </div>
 
-    <div class="info-row">
-        <span class="label">درجة الامتحان الشهري:</span>
-        <span class="value" id="st-exam">-</span>
+    <!-- Student data -->
+    <div id="studentState">
+      <div class="student-header">
+        <div class="avatar-ring" id="s_avatar">؟</div>
+        <div class="name" id="s_name">—</div>
+        <div class="code-pill">الكود: <span id="s_code">—</span></div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="val"><span id="s_attended">0</span> <small>/ <span id="s_total">0</span></small></div>
+          <div class="lbl">الحصص الحاضرة</div>
+        </div>
+        <div class="stat-box">
+          <div class="val" id="s_grade">0</div>
+          <div class="lbl">درجة الامتحان الشهري</div>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="top-line">
+          <span>نسبة الحضور</span>
+          <span id="s_percent">0%</span>
+        </div>
+        <div class="progress-bar"><div class="fill" id="s_progressFill" style="width:0%"></div></div>
+      </div>
+
+      <div class="info-line">
+        <span class="k">أيام الحصص الأسبوعية</span>
+        <span class="v" id="s_scheduleDays">—</span>
+      </div>
+      <div class="info-line">
+        <span class="k">شهر الاحتساب</span>
+        <span class="v" id="s_scheduleMonth">—</span>
+      </div>
+      <div class="info-line">
+        <span class="k">مصاريف الشهر</span>
+        <span class="v" id="s_feesAmount">0 ج.م</span>
+      </div>
+
+      <div class="fee-status" id="s_feeStatus">—</div>
+
+      <div class="section-title">📅 تواريخ الحضور المسجلة</div>
+      <div class="dates-list" id="s_datesList">
+        <div class="no-dates">لا توجد تواريخ حضور مسجلة بعد</div>
+      </div>
+
+      <div class="live-badge">
+        <span class="pulse"></span>
+        البيانات تتحدث لحظياً
+      </div>
     </div>
 
-    <div class="info-row">
-        <span class="label">حالة المصاريف الشهرية:</span>
-        <span id="st-status" class="badge unpaid">غير معروف</span>
-    </div>
-
-    <div class="dates-box">
-        <span class="label">تواريخ أيام الحضور المسجلة بالسنتر:</span>
-        <div id="st-dates" class="dates-list">لا يوجد حضور مسجل حتى الآن</div>
-    </div>
+  </div>
 </div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyD6UDuCBns0_zdWOhnLOX3OtKelHs3hGmc",
-        authDomain: "altafawuk-center.firebaseapp.com",
-        databaseURL: "https://altafawuk-center-default-rtdb.firebaseio.com",
-        projectId: "altafawuk-center",
-        storageBucket: "altafawuk-center.firebasestorage.app",
-        messagingSenderId: "499180495752",
-        appId: "1:499180495752:web:6f2e72fb4e87f8becc103d"
-    };
+/* =========================================================
+   1) FIREBASE CONFIG
+   (نفس بيانات ملف index.html)
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyD6UDuCBns0_zdWOhnLOX3OtKelHs3hGmc",
+  authDomain: "altafawuk-center.firebaseapp.com",
+  databaseURL: "https://altafawuk-center-default-rtdb.firebaseio.com",
+  projectId: "altafawuk-center",
+  storageBucket: "altafawuk-center.firebasestorage.app",
+  messagingSenderId: "499180495752",
+  appId: "1:499180495752:web:6f2e72fb4e87f8becc103d"
+};
 
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const studentCode = urlParams.get('code');
+const WEEKDAY_NAMES = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
-    if (studentCode) {
-        database.ref('students/' + studentCode).on('value', (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                document.getElementById('st-name').innerText = data.name;
-                document.getElementById('st-code').innerText = data.code;
-                document.getElementById('st-attendance').innerText = data.attendanceCount || 0;
-                document.getElementById('st-total-sessions').innerText = data.totalSessions || 8;
-                document.getElementById('st-exam').innerText = data.examScore || 'لم تحدد بعد';
-                
-                const statusElem = document.getElementById('st-status');
-                if (data.isPaid) {
-                    statusElem.innerText = 'تم السداد ✅';
-                    statusElem.className = 'badge paid';
-                } else {
-                    statusElem.innerText = 'لم يتم السداد ❌';
-                    statusElem.className = 'badge unpaid';
-                }
+/* =========================================================
+   2) READ "code" FROM URL
+   ========================================================= */
+function getCodeFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return (params.get('code') || '').trim();
+}
 
-                if (data.attendanceDates && data.attendanceDates.length > 0) {
-                    document.getElementById('st-dates').innerText = data.attendanceDates.join(' | ');
-                } else {
-                    document.getElementById('st-dates').innerText = 'لا يوجد تواريخ حضور مسجلة بعد';
-                }
-            } else {
-                document.getElementById('student-card').innerHTML = "<h3 style='color:red; text-align:center;'>عفواً، بيانات هذا الطالب غير موجودة بالسيستم!</h3>";
-            }
-        });
-    } else {
-        document.getElementById('student-card').innerHTML = "<h3 style='color:red; text-align:center;'>رابط غير صحيح أو ناقص، برجاء التأكد من الكود!</h3>";
+const studentCode = getCodeFromUrl();
+
+const loadingState = document.getElementById('loadingState');
+const notFoundState = document.getElementById('notFoundState');
+const studentState = document.getElementById('studentState');
+
+if (!studentCode) {
+  showNotFound();
+} else {
+  listenToStudent(studentCode);
+}
+
+/* =========================================================
+   3) REALTIME LISTENER
+   ========================================================= */
+function listenToStudent(code) {
+  const ref = db.ref('students/' + code);
+  ref.on('value', (snap) => {
+    if (!snap.exists()) {
+      showNotFound();
+      return;
     }
+    renderStudent(snap.val(), code);
+  }, (error) => {
+    showNotFound();
+  });
+}
+
+function showNotFound() {
+  loadingState.style.display = 'none';
+  studentState.style.display = 'none';
+  notFoundState.style.display = 'block';
+}
+
+/* =========================================================
+   4) RENDER
+   ========================================================= */
+function scheduleDaysLabel(scheduleDays) {
+  const days = (scheduleDays || []).map(Number).sort((a, b) => a - b);
+  if (days.length === 0) return '—';
+  return days.map((d) => WEEKDAY_NAMES[d]).join('، ');
+}
+
+function renderStudent(s, code) {
+  loadingState.style.display = 'none';
+  notFoundState.style.display = 'none';
+  studentState.style.display = 'block';
+
+  const name = s.name || '—';
+  document.getElementById('s_name').textContent = name;
+  document.getElementById('s_code').textContent = code;
+  document.getElementById('s_avatar').textContent = name.trim().charAt(0) || '؟';
+
+  const attended = Number(s.attendedSessions) || 0;
+  const total = Number(s.totalSessions) || 0;
+  const grade = (s.examGrade !== undefined && s.examGrade !== null) ? s.examGrade : 0;
+
+  document.getElementById('s_attended').textContent = attended;
+  document.getElementById('s_total').textContent = total;
+  document.getElementById('s_grade').textContent = grade;
+
+  const percent = total > 0 ? Math.min(100, Math.round((attended / total) * 100)) : 0;
+  document.getElementById('s_percent').textContent = percent + '%';
+  document.getElementById('s_progressFill').style.width = percent + '%';
+
+  document.getElementById('s_scheduleDays').textContent = scheduleDaysLabel(s.scheduleDays);
+  document.getElementById('s_scheduleMonth').textContent = s.scheduleMonthLabel || '—';
+
+  const feesAmount = Number(s.fees) || 0;
+  document.getElementById('s_feesAmount').textContent = feesAmount.toLocaleString('ar-EG') + ' ج.م';
+
+  const feeBox = document.getElementById('s_feeStatus');
+  if (s.feesPaid) {
+    feeBox.className = 'fee-status paid';
+    feeBox.textContent = '✔ حالة المصاريف: تم السداد';
+  } else {
+    feeBox.className = 'fee-status unpaid';
+    feeBox.textContent = '✖ حالة المصاريف: لم يتم السداد';
+  }
+
+  renderDates(s.attendanceDates);
+}
+
+function renderDates(attendanceDates) {
+  const listEl = document.getElementById('s_datesList');
+  if (!attendanceDates) {
+    listEl.innerHTML = '<div class="no-dates">لا توجد تواريخ حضور مسجلة بعد</div>';
+    return;
+  }
+
+  const dates = Object.values(attendanceDates)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b) - new Date(a));
+
+  if (dates.length === 0) {
+    listEl.innerHTML = '<div class="no-dates">لا توجد تواريخ حضور مسجلة بعد</div>';
+    return;
+  }
+
+  listEl.innerHTML = dates.map((d, i) => `
+    <div class="date-item">
+      <span class="dot"></span>
+      <span>${escapeHtml(d)}</span>
+      <span class="num">حصة ${dates.length - i}</span>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 </script>
 </body>
 </html>
